@@ -1,0 +1,5 @@
+find_package (Threads)
+find_package (OpenMP)
+add_executable (PerformanceTest "PerformanceTest.cpp")
+target_link_libraries(PerformanceTest PUBLIC LatentFactorModel ${CMAKE_THREAD_LIBS_INIT} OpenMP::OpenMP_CXX)
+target_compile_options(PerformanceTest PUBLIC  -std=c++11 -Wall -Wextra)

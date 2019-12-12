@@ -23,5 +23,6 @@ public:
 	LatentFactorModel* build(const Eigen::Ref<Eigen::MatrixXi>&  data, int factors);
 	LatentFactorModel* initialize();
 	LatentFactorModel* iterate(float learning_rate, float reg_term);
+	float predict(int user, int item);
 };
 }

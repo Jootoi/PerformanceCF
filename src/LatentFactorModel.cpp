@@ -12,8 +12,8 @@ model::LatentFactorModel* model::LatentFactorModel::build(const Eigen::Ref<Eigen
 }
 
 model::LatentFactorModel* model::LatentFactorModel::initialize() {
-	this->latent_user_matrix = Eigen::MatrixXf::Ones(this->m, this->factors);
-	this->latent_item_matrix = Eigen::MatrixXf::Ones(this->n, this->factors);
+	this->latent_user_matrix = Eigen::MatrixXf::Random(this->m, this->factors);
+	this->latent_item_matrix = Eigen::MatrixXf::Random(this->n, this->factors);
 
 	this->bias_user_vector = Eigen::VectorXf::Zero(this->m);
 	this->bias_item_vector = Eigen::VectorXf::Zero(this->n);
@@ -23,13 +23,13 @@ model::LatentFactorModel* model::LatentFactorModel::initialize() {
 
 model::LatentFactorModel* model::LatentFactorModel::iterate(float learning_rate, float reg_term)
 {
+#pragma omp parallel for
 	for (long i = 0; i < this->data_rows; i++) {
 		int user = this->data.coeff(i, 0);
 		int item = this->data.coeff(i, 1);
 		int rating = this->data.coeff(i, 2);
 
-		float pred = this->global_mean + this->bias_user_vector(user) + bias_item_vector(item);
-		pred += this->latent_user_matrix.row(user).dot(this->latent_item_matrix.row(item));
+		float pred = this->global_mean + this->bias_user_vector(user) + bias_item_vector(item) + this->latent_user_matrix.row(user).dot(this->latent_item_matrix.row(item));
 		float err = rating - pred;
 
 		this->bias_user_vector(user) += learning_rate * (err - reg_term * this->bias_user_vector(user));
@@ -39,4 +39,10 @@ model::LatentFactorModel* model::LatentFactorModel::iterate(float learning_rate,
 		this->latent_item_matrix.row(item) += learning_rate * (err * this->latent_user_matrix.row(user) - reg_term * this->latent_item_matrix.row(item));
 	}
 	return this;
+}
+
+float model::LatentFactorModel::predict(int user, int item)
+{
+	float pred = this->global_mean + this->bias_user_vector(user) + bias_item_vector(item) +  this->latent_user_matrix.row(user).dot(this->latent_item_matrix.row(item));
+	return pred;
 }
