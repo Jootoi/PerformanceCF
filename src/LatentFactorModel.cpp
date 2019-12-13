@@ -26,13 +26,13 @@ model::LatentFactorModel<T>* model::LatentFactorModel<T>::build(int factors) {
 template<typename T>
 model::LatentFactorModel<T>* model::LatentFactorModel<T>::iterate(float learning_rate, float reg_term)
 {
-#pragma omp parallel for
+
 	for (long i = 0; i < this->data_rows; i++) {
 		int user = this->users[i];
 		int item = this->items[i];
 		T rating = this->ratings[i];
 
-		float pred = this->global_mean + this->bias_user_vector(user) + bias_item_vector(item) + this->latent_user_matrix.row(user).dot(this->latent_item_matrix.row(item));
+		float pred = this->global_mean + this->bias_user_vector(user) + bias_item_vector(item) + this->latent_user_matrix.row(user)*this->latent_item_matrix.row(item).adjoint();
 		float err = rating - pred;
 
 		this->bias_user_vector(user) += learning_rate * (err - reg_term * this->bias_user_vector(user));
@@ -54,3 +54,4 @@ float model::LatentFactorModel<T>::predict(int user, int item)
 template class model::LatentFactorModel<float>;
 template class model::LatentFactorModel<int>;
 template class model::LatentFactorModel<char>;
+template class model::LatentFactorModel<bool>;
