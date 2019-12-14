@@ -32,7 +32,7 @@ model::LatentFactorModel<T>* model::LatentFactorModel<T>::iterate(float learning
 		int item = this->items[i];
 		T rating = this->ratings[i];
 
-		float pred = this->global_mean + this->bias_user_vector(user) + bias_item_vector(item) + this->latent_user_matrix.row(user)*this->latent_item_matrix.row(item).adjoint();
+		float pred = this->global_mean + this->bias_user_vector(user) + bias_item_vector(item) + this->latent_user_matrix.row(user)*this->latent_item_matrix.row(item).transpose();
 		float err = rating - pred;
 
 		this->bias_user_vector(user) += learning_rate * (err - reg_term * this->bias_user_vector(user));

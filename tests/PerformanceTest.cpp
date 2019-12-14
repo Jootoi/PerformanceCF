@@ -8,18 +8,16 @@
 
 template<typename T>
 void readMovieLensToMatrix(std::string path, int rows, std::vector<int> &users, std::vector<int> &movies, std::vector<T> &ratings) {
-	io::CSVReader<3> in(path);
-	in.read_header(io::ignore_extra_column, "userId", "movieId", "rating");
-	int user; int movie; double rating;
+	io::CSVReader<4> in(path);
+	in.read_header(io::ignore_extra_column, "userId", "movieId", "rating", "timestamp");
+	int user; int movie; double rating; long timestamp;
 	int i;
 	for (i = 0; i < rows; i++) {
-		in.read_row(user, movie, rating);
+		in.read_row(user, movie, rating, timestamp);
 		users[i] = user;
 		movies[i] = movie;
 		ratings[i] = static_cast<T>(rating);
-		++i;
 	}
-	std::cout << "Rows in data: " << i << std::endl;
 }
 
 template<typename T>
@@ -38,6 +36,7 @@ void testLatentFactorModel(std::vector<int>& users, std::vector<int>& items, std
 	auto diff_init = std::chrono::duration_cast<std::chrono::seconds>(start_iteration - start);
 	auto diff_iter = std::chrono::duration_cast<std::chrono::seconds>(end - start_iteration);
 	std::cout << "Second to init: " << diff_init.count() <<" Seconds to iterate: "<<diff_iter.count() <<"  factors: " << factors << " iterations: " << iterations << std::endl;
+	std::cout << "items rows: " << m->n << " users rows: " << m->m << std::endl;
 	//Eigen::IOFormat CleanFmt(4, 0, ", ", "\n", "[", "]");
 	//std::cout << m->latent_user_matrix.block<10,10>(0,0).format(CleanFmt);
 	//std::cout << m->latent_item_matrix.block<10, 10>(0, 0).format(CleanFmt);
@@ -50,7 +49,11 @@ template<typename T>
 void testSparseMatrixCreation(std::vector<int>& users, std::vector<int>& items, std::vector<T>& ratings) {
 	Eigen::SparseMatrix<T> mat = Utilities::createSparseMatrix<T>(users, items, ratings);
 	std::cout << "Non zeros: " << mat.nonZeros() << " rows: " << mat.rows() << " cols: " << mat.cols() << std::endl;
-
+	Eigen::Matrix<float, Eigen::Dynamic, 1> rowSums = Utilities::rowSums(mat);
+	Eigen::Matrix<int, Eigen::Dynamic, 1> nonzeros = Utilities::rowNonZeros(mat);
+	Eigen::IOFormat CleanFmt(4, 0, ", ", "\n", "[", "]");
+	std::cout << rowSums.head(10).format(CleanFmt) << std::endl<<std::endl;
+	std::cout << nonzeros.head(10).format(CleanFmt) << std::endl;
 }
 
 int main() {
@@ -63,7 +66,7 @@ int main() {
 
 	readMovieLensToMatrix<float>("/mnt/c/Users/Joonas/Nextcloud/Shared/Source/Projects/PerformanceCF/tests/ratings.csv", 25000095, users, items,ratings);
 	
-	testLatentFactorModel<float>(users, items, ratings, 15, 100, 0.01, 0.05);
+	testLatentFactorModel<float>(users, items, ratings, 1, 1, 0.01, 0.05);
 	std::cout << users.size() << std::endl;
 	testSparseMatrixCreation<float>(users, items, ratings);
 

@@ -10,8 +10,7 @@ namespace model {
 template<typename T>
 class LatentFactorModel {
 private:
-	int n;
-	int m;
+
 	int factors;
 	long data_rows;
 	float global_mean;
@@ -19,6 +18,9 @@ private:
 	std::vector<int>& items;
 	std::vector<T>& ratings;
 public:
+	int n;
+	int m;
+
 	LatentFactorModel(std::vector<int>& users, std::vector<int>& items, std::vector<T>& ratings);
 	Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> latent_user_matrix;
 	Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> latent_item_matrix;

@@ -38,10 +38,26 @@ namespace Utilities {
 	}
 
 	template<typename T>
+	Eigen::Matrix<float, Eigen::Dynamic, 1> rowSums(Eigen::SparseMatrix<T> mat) {
+		Eigen::VectorXf oneVec = Eigen::VectorXf::Ones(mat.cols());
+		Eigen::Matrix<float, Eigen::Dynamic, 1> sums = mat * oneVec;
+		return sums;
+	}
+
+	template<typename T>
+	Eigen::Matrix<int, Eigen::Dynamic, 1> rowNonZeros(Eigen::SparseMatrix<T> mat) {
+		Eigen::VectorXi nonzeros(mat.cols());
+		for (int i = 0; i < mat.cols(); i++) {
+			nonzeros[i] = mat.innerVector(i).nonZeros();
+		}
+		return nonzeros;
+	}
+
+	template<typename T>
 	Eigen::SparseMatrix<T> createSparseMatrix(std::vector<int>& users, std::vector<int>& items, std::vector<T>& ratings) {
 		int i_max = maxVectorElement<int>(users)+1;
 		int j_max = maxVectorElement<int>(items)+1;
-		Eigen::SparseMatrix<T> mat(i_max, j_max);
+		Eigen::SparseMatrix<T, Eigen::RowMajor> mat(i_max, j_max);
 		std::vector<Eigen::Triplet<T>> tripletVec(users.size());
 		createTripletVector(users, items, ratings, tripletVec);
 		mat.setFromTriplets(tripletVec.begin(), tripletVec.end());
