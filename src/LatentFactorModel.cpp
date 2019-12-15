@@ -89,7 +89,17 @@ model::LatentFactorModel<T>* model::LatentFactorModel<T>::batchIterate(int epoch
 template<typename T>
 float model::LatentFactorModel<T>::predict(int user, int item)
 {
-	float pred = this->global_mean + this->bias_user_vector(user) + bias_item_vector(item) +  this->latent_user_matrix.row(user).dot(this->latent_item_matrix.row(item));
+	float pred = this->global_mean;
+	if (user <= this->m) {
+		pred += this->bias_user_vector(user);
+	}
+	if (item <= this->n) {
+		pred += bias_item_vector(item);
+	}
+	if (user <= this->m && item <= this->n) {
+		pred += this->latent_user_matrix.row(user).dot(this->latent_item_matrix.row(item));
+	}
+			
 	return pred;
 }
 

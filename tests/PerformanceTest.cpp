@@ -3,7 +3,6 @@
 #include <vector>
 #include <chrono>
 #include<cmath>
-#include"../src/Utilities.h"
 #include"../src/LatentFactorModel.h"
 
 template<typename T>
@@ -74,12 +73,17 @@ void testSparseMatrixCreation(std::vector<int>& users, std::vector<int>& items, 
 	Eigen::Matrix<float, Eigen::Dynamic, 1> means = Utilities::colMeans(mat);
 	std::cout << means.head(10).format(CleanFmt) << std::endl;
 
-	Eigen::SparseMatrix<T> binMat = Utilities::BinarizeByCol(mat);
+	Eigen::SparseMatrix<bool> binMat = Utilities::BinarizeByCol(mat);
 	std::cout << "Non zeros: " << binMat.nonZeros() << " rows: " << binMat.rows() << " cols: " << binMat.cols() << std::endl;
 
+	auto start = std::chrono::system_clock::now();
+	std::vector<float> sim = Utilities::BatchJaccardSimilarity(1, binMat);
+	auto end = std::chrono::system_clock::now();
+	auto diff = std::chrono::duration_cast<std::chrono::seconds>(end - start);
+	std::cout << "Seconds: " << diff.count() << std::endl;
+	auto it = max_element(std::begin(sim), std::end(sim));
 
-
-
+	std::cout<<" max:"<<*it<< std::endl;
 }
 
 int main() {
@@ -92,7 +96,7 @@ int main() {
 
 	readMovieLensToMatrix<float>("/mnt/c/Users/Joonas/Nextcloud/Shared/Source/Projects/PerformanceCF/tests/ratings.csv", 25000095, users, items,ratings);
 	
-	testLatentFactorModel<float>(users, items, ratings, 15, 10, 0.01, 0.05);
+	testLatentFactorModel<float>(users, items, ratings, 2, 5, 0.01, 0.05);
 	std::cout << users.size() << std::endl;
 	testSparseMatrixCreation<float>(users, items, ratings);
 

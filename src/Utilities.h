@@ -4,8 +4,6 @@
 #include <Eigen/SparseCore>
 namespace Utilities {
 
-	void reduceToUniques(void* vec);
-
 
 	template<typename T>
 	T sumVectorElements(std::vector<T>& a) {
@@ -60,14 +58,33 @@ namespace Utilities {
 		return means;
 	}
 	template<typename T>
-	Eigen::SparseMatrix<T> BinarizeByCol(Eigen::SparseMatrix<T> mat) {
+	Eigen::SparseMatrix<bool> BinarizeByCol(Eigen::SparseMatrix<T> mat) {
 		Eigen::Matrix<float, Eigen::Dynamic, 1> means = colMeans(mat);
 		Eigen::SparseMatrix<T> binMat = mat;
 		for (int k = 0; k < binMat.outerSize(); ++k)
 			for (typename Eigen::SparseMatrix<T>::InnerIterator it(binMat, k); it; ++it)
-				it.valueRef() -= means(k);
-		binMat.prune(1,0.5);
-		return binMat;
+				it.valueRef() = (it.valueRef() - means(k)) < 0;
+		binMat.prune(0,0.1);
+		return binMat.template cast<bool>();
+	}
+
+	inline float JaccardSimilarity(int col1, int col2, Eigen::SparseMatrix<bool> binMat) {
+		Eigen::VectorXf oneVec = Eigen::VectorXf::Ones(binMat.rows());
+		float u = (binMat.col(col1) && binMat.col(col2)).eval().nonZeros();
+		float i = (binMat.col(col1) || binMat.col(col2)).eval().nonZeros();
+		return u/i ;
+	}
+
+	inline std::vector<float> BatchJaccardSimilarity(int col1, Eigen::SparseMatrix<bool> binMat) {
+		std::vector<float> sims(binMat.cols());
+		for (int i = 0; i < binMat.cols(); i++) {
+			Eigen::VectorXf oneVec = Eigen::VectorXf::Ones(binMat.rows());
+			float u = (binMat.col(col1) && binMat.col(i)).eval().nonZeros();
+			float intersec = (binMat.col(col1) || binMat.col(i)).eval().nonZeros();
+			sims[i] = u / intersec;
+		}
+		return sims;
+
 	}
 
 	template<typename T>
@@ -82,5 +99,5 @@ namespace Utilities {
 	}
 
 
-}
+};
 
