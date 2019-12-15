@@ -21,6 +21,15 @@ void readMovieLensToMatrix(std::string path, int rows, std::vector<int> &users, 
 }
 
 template<typename T>
+void testPredicting(std::vector<int>& users, std::vector<int>& items, std::vector<T>& ratings, model::LatentFactorModel<T> *m) {
+	double sum = 0;
+	for (int i = 1; i < users.size(); i++) {
+		float pred = m->predict(users[i], items[i]);
+		sum += std::abs(pred - ratings[i]);
+	}
+	std::cout << "MAE: " << sum / users.size() << std::endl;
+}
+template<typename T>
 void testLatentFactorModel(std::vector<int>& users, std::vector<int>& items, std::vector<T>& ratings, int factors, int iterations, float learning_rate, float reg_term) {
 	auto start = std::chrono::system_clock::now();
 	model::LatentFactorModel<T>* m = new model::LatentFactorModel<T>(users, items, ratings);
@@ -28,15 +37,20 @@ void testLatentFactorModel(std::vector<int>& users, std::vector<int>& items, std
 	int i = 0;
 	auto start_iteration = std::chrono::system_clock::now();
 	while (i < iterations) {
+		testPredicting<T>(users, items, ratings, m);
 		m = m->iterate(learning_rate, reg_term);
+		//m = m->batchIterate(1, learning_rate, reg_term);
 		++i;
-
+		
 	}
+	
 	auto end = std::chrono::system_clock::now();
 	auto diff_init = std::chrono::duration_cast<std::chrono::seconds>(start_iteration - start);
 	auto diff_iter = std::chrono::duration_cast<std::chrono::seconds>(end - start_iteration);
 	std::cout << "Second to init: " << diff_init.count() <<" Seconds to iterate: "<<diff_iter.count() <<"  factors: " << factors << " iterations: " << iterations << std::endl;
 	std::cout << "items rows: " << m->n << " users rows: " << m->m << std::endl;
+	
+
 	//Eigen::IOFormat CleanFmt(4, 0, ", ", "\n", "[", "]");
 	//std::cout << m->latent_user_matrix.block<10,10>(0,0).format(CleanFmt);
 	//std::cout << m->latent_item_matrix.block<10, 10>(0, 0).format(CleanFmt);
@@ -47,13 +61,25 @@ void testLatentFactorModel(std::vector<int>& users, std::vector<int>& items, std
 
 template<typename T>
 void testSparseMatrixCreation(std::vector<int>& users, std::vector<int>& items, std::vector<T>& ratings) {
+	Eigen::IOFormat CleanFmt(4, 0, ", ", "\n", "[", "]");
 	Eigen::SparseMatrix<T> mat = Utilities::createSparseMatrix<T>(users, items, ratings);
 	std::cout << "Non zeros: " << mat.nonZeros() << " rows: " << mat.rows() << " cols: " << mat.cols() << std::endl;
-	Eigen::Matrix<float, Eigen::Dynamic, 1> rowSums = Utilities::rowSums(mat);
-	Eigen::Matrix<int, Eigen::Dynamic, 1> nonzeros = Utilities::rowNonZeros(mat);
-	Eigen::IOFormat CleanFmt(4, 0, ", ", "\n", "[", "]");
-	std::cout << rowSums.head(10).format(CleanFmt) << std::endl<<std::endl;
+
+	Eigen::Matrix<float, Eigen::Dynamic, 1> colSums = Utilities::colSums(mat);
+	std::cout << colSums.head(10).format(CleanFmt) << std::endl<<std::endl;
+
+	Eigen::Matrix<float, Eigen::Dynamic, 1> nonzeros = Utilities::colNonZeros(mat);
 	std::cout << nonzeros.head(10).format(CleanFmt) << std::endl;
+
+	Eigen::Matrix<float, Eigen::Dynamic, 1> means = Utilities::colMeans(mat);
+	std::cout << means.head(10).format(CleanFmt) << std::endl;
+
+	Eigen::SparseMatrix<T> binMat = Utilities::BinarizeByCol(mat);
+	std::cout << "Non zeros: " << binMat.nonZeros() << " rows: " << binMat.rows() << " cols: " << binMat.cols() << std::endl;
+
+
+
+
 }
 
 int main() {
@@ -66,7 +92,7 @@ int main() {
 
 	readMovieLensToMatrix<float>("/mnt/c/Users/Joonas/Nextcloud/Shared/Source/Projects/PerformanceCF/tests/ratings.csv", 25000095, users, items,ratings);
 	
-	testLatentFactorModel<float>(users, items, ratings, 1, 1, 0.01, 0.05);
+	testLatentFactorModel<float>(users, items, ratings, 15, 10, 0.01, 0.05);
 	std::cout << users.size() << std::endl;
 	testSparseMatrixCreation<float>(users, items, ratings);
 

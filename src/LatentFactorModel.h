@@ -30,6 +30,7 @@ public:
 
 	LatentFactorModel* build(int factors);
 	LatentFactorModel* iterate(float learning_rate, float reg_term);
+	model::LatentFactorModel<T>* batchIterate(int epochs, float learning_rate, float reg_term);
 	float predict(int user, int item);
 };
 }

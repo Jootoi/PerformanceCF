@@ -32,7 +32,7 @@ model::LatentFactorModel<T>* model::LatentFactorModel<T>::iterate(float learning
 		int item = this->items[i];
 		T rating = this->ratings[i];
 
-		float pred = this->global_mean + this->bias_user_vector(user) + bias_item_vector(item) + this->latent_user_matrix.row(user)*this->latent_item_matrix.row(item).transpose();
+		float pred = this->global_mean + this->bias_user_vector(user) + bias_item_vector(item) + this->latent_user_matrix.row(user) * this->latent_item_matrix.row(item).transpose();
 		float err = rating - pred;
 
 		this->bias_user_vector(user) += learning_rate * (err - reg_term * this->bias_user_vector(user));
@@ -45,11 +45,55 @@ model::LatentFactorModel<T>* model::LatentFactorModel<T>::iterate(float learning
 }
 
 template<typename T>
+model::LatentFactorModel<T>* model::LatentFactorModel<T>::batchIterate(int epochs, float learning_rate, float reg_term)
+{
+	std::vector<float> user_bias(this->data_rows);
+	std::vector<float> item_bias(this->data_rows);
+	std::vector<float> err(this->data_rows);
+
+	for (int k = 0; k < epochs; k++) {
+
+		for (long i = 0; i < this->data_rows; i++) {
+			int user = this->users[i];
+			int item = this->items[i];
+			T rating = this->ratings[i];
+
+			float pred = this->global_mean + this->bias_user_vector(user) + bias_item_vector(item) + this->latent_user_matrix.row(user) * this->latent_item_matrix.row(item).transpose();
+			err[i] = rating - pred;
+
+			user_bias[i] = learning_rate * (err[i] - reg_term * this->bias_user_vector(user));
+			item_bias[i] = learning_rate * (err[i] - reg_term * this->bias_item_vector(item));
+
+		}
+
+		for (long j = 0; j < this->data_rows; j++) {
+			int user = this->users[j];
+			int item = this->items[j];
+
+			this->bias_user_vector(user) += user_bias[j];
+			this->bias_item_vector(item) += item_bias[j];
+				
+			this->latent_user_matrix.row(user) += learning_rate * (err[j] * this->latent_item_matrix.row(item) - reg_term * this->latent_user_matrix.row(user));
+			this->latent_item_matrix.row(item) += learning_rate * (err[j] * this->latent_user_matrix.row(user) - reg_term * this->latent_item_matrix.row(item));
+
+	}
+	//this->bias_user_vector(user) += learning_rate * (err[i] - reg_term * this->bias_user_vector(user));
+	//this->bias_item_vector(item) += learning_rate * (err[i] - reg_term * this->bias_item_vector(item));
+
+	}
+
+
+	return this;
+}
+
+template<typename T>
 float model::LatentFactorModel<T>::predict(int user, int item)
 {
 	float pred = this->global_mean + this->bias_user_vector(user) + bias_item_vector(item) +  this->latent_user_matrix.row(user).dot(this->latent_item_matrix.row(item));
 	return pred;
 }
+
+
 
 template class model::LatentFactorModel<float>;
 template class model::LatentFactorModel<int>;
