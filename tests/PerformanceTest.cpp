@@ -18,6 +18,34 @@ void readMovieLensToMatrix(std::string path, int rows, std::vector<int> &users, 
 		ratings[i] = static_cast<T>(rating);
 	}
 }
+template<typename T>
+void splitToTrainTest(std::vector<int>& users, std::vector<int>& items, std::vector<T>& ratings, std::vector<int>& users_train, std::vector<int>& items_train, std::vector<T>& ratings_train, std::vector<int>& users_test, std::vector<int>& items_test, std::vector<T>& ratings_test) {
+	int i = 0;
+	int j = 0;
+	int k = 0;
+	while (i < users.size()) {
+		if (!(i % 10)) {
+			users_test[j] = users[i];
+			items_test[j] = items[i];
+			ratings_test[j] = ratings[i];
+			j++;
+		}
+		else {
+			users_train[k] = users[i];
+			items_train[k] = items[i];
+			ratings_train[k] = ratings[i];
+			k++;
+		}
+		i++;
+	}
+	users_test.erase(users_test.begin() + j, users_test.end());
+	items_test.erase(items_test.begin() + j, items_test.end());
+	ratings_test.erase(ratings_test.begin() + j, ratings_test.end());
+
+	users_train.erase(users_train.begin() + k, users_train.end());
+	items_train.erase(items_train.begin() + k, items_train.end());
+	ratings_train.erase(ratings_train.begin() + k, ratings_train.end());
+}
 
 template<typename T>
 void testPredicting(std::vector<int>& users, std::vector<int>& items, std::vector<T>& ratings, model::LatentFactorModel<T> *m) {
@@ -28,15 +56,24 @@ void testPredicting(std::vector<int>& users, std::vector<int>& items, std::vecto
 	}
 	std::cout << "MAE: " << sum / users.size() << std::endl;
 }
+
+void printFirstLast(std::vector<int> vec) {
+	std::cout << *vec.begin() << " " << *vec.end() << std::endl;
+}
+
 template<typename T>
 void testLatentFactorModel(std::vector<int>& users, std::vector<int>& items, std::vector<T>& ratings, int factors, int iterations, float learning_rate, float reg_term) {
+	std::vector<int> users_train(24000000); std::vector<int> items_train(24000000); std::vector<T> ratings_train(24000000);
+	std::vector<int> users_test(3000000); std::vector<int> items_test(3000000); std::vector<T> ratings_test(3000000);
+	splitToTrainTest(users, items, ratings, users_train, items_train, ratings_train, users_test, items_test, ratings_test);
+	printFirstLast(users_train); printFirstLast(items_train); printFirstLast(users_test); printFirstLast(items_test);
 	auto start = std::chrono::system_clock::now();
-	model::LatentFactorModel<T>* m = new model::LatentFactorModel<T>(users, items, ratings);
+	model::LatentFactorModel<T>* m = new model::LatentFactorModel<T>(users_train, items_train, ratings_train);
 	m = m->build(factors);
 	int i = 0;
 	auto start_iteration = std::chrono::system_clock::now();
 	while (i < iterations) {
-		testPredicting<T>(users, items, ratings, m);
+		//testPredicting<T>(users_test, items_test, ratings_test, m);
 		m = m->iterate(learning_rate, reg_term);
 		//m = m->batchIterate(1, learning_rate, reg_term);
 		++i;
@@ -44,6 +81,7 @@ void testLatentFactorModel(std::vector<int>& users, std::vector<int>& items, std
 	}
 	
 	auto end = std::chrono::system_clock::now();
+	testPredicting<T>(users_test, items_test, ratings_test, m);
 	auto diff_init = std::chrono::duration_cast<std::chrono::seconds>(start_iteration - start);
 	auto diff_iter = std::chrono::duration_cast<std::chrono::seconds>(end - start_iteration);
 	std::cout << "Second to init: " << diff_init.count() <<" Seconds to iterate: "<<diff_iter.count() <<"  factors: " << factors << " iterations: " << iterations << std::endl;
@@ -82,8 +120,7 @@ void testSparseMatrixCreation(std::vector<int>& users, std::vector<int>& items, 
 	auto diff = std::chrono::duration_cast<std::chrono::seconds>(end - start);
 	std::cout << "Seconds: " << diff.count() << std::endl;
 	auto it = max_element(std::begin(sim), std::end(sim));
-
-	std::cout<<" max:"<<*it<< std::endl;
+	std::cout<<"max: "<<*it<< std::endl;
 }
 
 int main() {
@@ -96,7 +133,7 @@ int main() {
 
 	readMovieLensToMatrix<float>("/mnt/c/Users/Joonas/Nextcloud/Shared/Source/Projects/PerformanceCF/tests/ratings.csv", 25000095, users, items,ratings);
 	
-	testLatentFactorModel<float>(users, items, ratings, 2, 5, 0.01, 0.05);
+	testLatentFactorModel<float>(users, items, ratings, 15, 100, 0.01, 0.05);
 	std::cout << users.size() << std::endl;
 	testSparseMatrixCreation<float>(users, items, ratings);
 

@@ -75,6 +75,8 @@ namespace Utilities {
 		return u/i ;
 	}
 
+
+
 	inline std::vector<float> BatchJaccardSimilarity(int col1, Eigen::SparseMatrix<bool> binMat) {
 		std::vector<float> sims(binMat.cols());
 		for (int i = 0; i < binMat.cols(); i++) {
