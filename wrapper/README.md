@@ -1,0 +1,3 @@
+- Eigen needs to be installed in /usr/local/include
+- Use "python3 setup.py install" to install the module
+- Run script with "python3 script.py"
