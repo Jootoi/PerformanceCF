@@ -81,6 +81,7 @@ void testLatentFactorModel(std::vector<int>& users, std::vector<int>& items, std
 	}
 	
 	auto end = std::chrono::system_clock::now();
+
 	testPredicting<T>(users_test, items_test, ratings_test, m);
 	auto diff_init = std::chrono::duration_cast<std::chrono::seconds>(start_iteration - start);
 	auto diff_iter = std::chrono::duration_cast<std::chrono::seconds>(end - start_iteration);
@@ -95,6 +96,39 @@ void testLatentFactorModel(std::vector<int>& users, std::vector<int>& items, std
 	//std::cout << m->bias_user_vector.head(10).format(CleanFmt);
 	//std::cout << m->bias_item_vector.head(10).format(CleanFmt);
 }
+
+template<typename T>
+void testLatentFactorModelBatchIteration(std::vector<int>& users, std::vector<int>& items, std::vector<T>& ratings, int factors, int iterations, float learning_rate, float reg_term) {
+	std::vector<int> users_train(24000000); std::vector<int> items_train(24000000); std::vector<T> ratings_train(24000000);
+	std::vector<int> users_test(3000000); std::vector<int> items_test(3000000); std::vector<T> ratings_test(3000000);
+	splitToTrainTest(users, items, ratings, users_train, items_train, ratings_train, users_test, items_test, ratings_test);
+	printFirstLast(users_train); printFirstLast(items_train); printFirstLast(users_test); printFirstLast(items_test);
+	auto start = std::chrono::system_clock::now();
+	model::LatentFactorModel<T>* m = new model::LatentFactorModel<T>(users_train, items_train, ratings_train);
+	m = m->build(factors);
+	int i = 0;
+	auto start_iteration = std::chrono::system_clock::now();
+	m = m->batchIterate(iterations, learning_rate, reg_term);
+
+	auto end = std::chrono::system_clock::now();
+
+	testPredicting<T>(users_test, items_test, ratings_test, m);
+	auto diff_init = std::chrono::duration_cast<std::chrono::seconds>(start_iteration - start);
+	auto diff_iter = std::chrono::duration_cast<std::chrono::seconds>(end - start_iteration);
+	std::cout << "Second to init: " << diff_init.count() << " Seconds to iterate: " << diff_iter.count() << "  factors: " << factors << " iterations: " << iterations << std::endl;
+	std::cout << "items rows: " << m->n << " users rows: " << m->m << std::endl;
+
+
+	//Eigen::IOFormat CleanFmt(4, 0, ", ", "\n", "[", "]");
+	//std::cout << m->latent_user_matrix.block<10,10>(0,0).format(CleanFmt);
+	//std::cout << m->latent_item_matrix.block<10, 10>(0, 0).format(CleanFmt);
+
+	//std::cout << m->bias_user_vector.head(10).format(CleanFmt);
+	//std::cout << m->bias_item_vector.head(10).format(CleanFmt);
+}
+
+
+
 
 template<typename T>
 void testSparseMatrixCreation(std::vector<int>& users, std::vector<int>& items, std::vector<T>& ratings) {
@@ -123,22 +157,22 @@ void testSparseMatrixCreation(std::vector<int>& users, std::vector<int>& items, 
 	std::cout<<"max: "<<*it<< std::endl;
 }
 
-int main() {
-	std::cout << "Hello world"<<std::endl;
+int main(int argc, char* argv[]) {
 	std::vector<int> users(25000095);
 	std::vector<int> items(25000095);
-	std::vector<float> ratings(25000095);
+	std::vector<char> ratings(25000095);
 	int n = Eigen::nbThreads();
 	std::cout << "Eigen threads: " << n << std::endl;
 
-	readMovieLensToMatrix<float>("/mnt/c/Users/Joonas/Nextcloud/Shared/Source/Projects/PerformanceCF/tests/ratings.csv", 25000095, users, items,ratings);
+	readMovieLensToMatrix<char>(argv[1], 25000095, users, items,ratings);
 	
-	testLatentFactorModel<float>(users, items, ratings, 15, 100, 0.01, 0.05);
+	testLatentFactorModel<char>(users, items, ratings, 15, 100, 0.01, 0.05);
+	testLatentFactorModelBatchIteration<char>(users, items, ratings, 15, 100, 0.01, 0.05);
 	std::cout << users.size() << std::endl;
-	testSparseMatrixCreation<float>(users, items, ratings);
+	
+	//testSparseMatrixCreation(users, items, ratings);
 
 
 
-	std::cout << "end" << std::endl;
-}
+	std::cout << "end" << std::endl;}
 
